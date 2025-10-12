@@ -16,7 +16,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _isAdmin = false;
-  String _selectedCategory = 'All'; // State for the selected category filter.
+  String _selectedCategory = 'All';
 
   @override
   void initState() {
@@ -41,175 +41,154 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// A function that simulates a network refresh for the pull-to-refresh indicator.
+  /// Our app uses streams, so it's always up-to-date, but this provides good UX.
+  Future<void> _handleRefresh() async {
+    // Simulate a network delay
+    await Future.delayed(const Duration(seconds: 1));
+    // The StreamBuilders will automatically handle updating the data.
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFFFFF7F0),
-          ),
-        ),
-        title: Row(
-          children: [
-            const Text(
-              'SipDrips',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color: Color(0xFF333333),
+      backgroundColor: const Color(0xFFFFF7F0),
+      // The body is now a RefreshIndicator wrapping a CustomScrollView.
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        child: CustomScrollView(
+          slivers: [
+            // --- APP BAR ---
+            SliverAppBar(
+              backgroundColor: const Color(0xFFFFF7F0),
+              title: Row(
+                children: [
+                  const Text('SipDrips', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Color(0xFF333333))),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => showSearch(context: context, delegate: CustomSearchDelegate()),
+                      child: Container(
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [BoxShadow(color: Colors.black.withAlpha(13), spreadRadius: 1, blurRadius: 5, offset: const Offset(0, 2))],
+                        ),
+                        child: Row(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(left: 12.0),
+                              child: Icon(Icons.search, color: Colors.grey[500], size: 20),
+                            ),
+                            const SizedBox(width: 8),
+                            Text('Search products...', style: TextStyle(color: Colors.grey[500])),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+              actions: [
+                IconButton(
+                  icon: Icon(Icons.logout, color: Colors.grey[700]),
+                  onPressed: () => FirebaseAuth.instance.signOut(),
+                  tooltip: 'Logout',
+                ),
+              ],
+              floating: true, // The app bar will reappear as soon as you scroll up.
+              pinned: true,   // The app bar will stay at the top.
+              snap: true,     // Helps the app bar snap into place.
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: GestureDetector(
-                onTap: () {
-                  showSearch(
-                    context: context,
-                    delegate: CustomSearchDelegate(),
-                  );
-                },
-                child: Container(
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(13),
-                        spreadRadius: 1,
-                        blurRadius: 5,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 12.0),
-                        child: Icon(Icons.search, color: Colors.grey[500], size: 20),
-                      ),
-                      const SizedBox(width: 8),
-                      Text('Search products...', style: TextStyle(color: Colors.grey[500])),
-                    ],
-                  ),
+
+            // --- PROMOTIONAL BANNER CAROUSEL ---
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance.collection('banners').snapshots(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return const SizedBox(height: 150);
+                    final banners = snapshot.data!.docs;
+                    return CarouselSlider(
+                      options: CarouselOptions(height: 150.0, autoPlay: true, enlargeCenterPage: true, viewportFraction: 0.85),
+                      items: banners.map((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        return Container(
+                          width: MediaQuery.of(context).size.width,
+                          margin: const EdgeInsets.symmetric(horizontal: 5.0),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: CachedNetworkImage(
+                              imageUrl: data['imageUrl'] ?? '',
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(color: Colors.grey[200]),
+                              errorWidget: (context, url, error) => const Icon(Icons.error),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
                 ),
               ),
             ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.logout, color: Colors.grey[700]),
-            onPressed: () {
-              FirebaseAuth.instance.signOut();
-            },
-            tooltip: 'Logout',
-          ),
-        ],
-      ),
-      backgroundColor: const Color(0xFFFFF7F0),
-      body: Column(
-        children: [
-          // Dynamic Promotional Banner Carousel
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('banners').snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const SizedBox(height: 150);
-                }
-                final banners = snapshot.data!.docs;
-                return CarouselSlider(
-                  options: CarouselOptions(
-                    height: 150.0,
-                    autoPlay: true,
-                    autoPlayInterval: const Duration(seconds: 5),
-                    enlargeCenterPage: true,
-                    viewportFraction: 0.85,
-                  ),
-                  items: banners.map((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    final imageUrl = data['imageUrl'] ?? '';
-                    return Container(
-                      width: MediaQuery.of(context).size.width,
-                      margin: const EdgeInsets.symmetric(horizontal: 5.0),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: CachedNetworkImage(
-                          imageUrl: imageUrl,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(color: Colors.grey[200]),
-                          errorWidget: (context, url, error) => const Icon(Icons.error),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-          ),
 
-          // --- CUSTOM CATEGORY FILTER BAR ---
-          _buildCategoryFilterBar(),
+            // --- CATEGORY FILTER BAR ---
+            SliverToBoxAdapter(child: _buildCategoryFilterBar()),
 
-          // Product Grid
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
+            // --- PRODUCT GRID ---
+            StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance.collection('products').snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
+                  return const SliverFillRemaining(child: Center(child: CircularProgressIndicator()));
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text('No products available right now.'));
+                  return const SliverFillRemaining(child: Center(child: Text('No products available.')));
                 }
 
-                // --- FILTERING LOGIC APPLIED HERE ---
                 final allProducts = snapshot.data!.docs;
                 final filteredProducts = _selectedCategory == 'All'
                     ? allProducts
                     : allProducts.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
-                  // Checks if the product's 'categories' list contains the selected category.
                   return (data['categories'] as List<dynamic>).contains(_selectedCategory);
                 }).toList();
 
                 if (filteredProducts.isEmpty) {
-                  return Center(child: Text('No products found in $_selectedCategory.'));
+                  return SliverFillRemaining(child: Center(child: Text('No products found in $_selectedCategory.')));
                 }
 
-                return GridView.builder(
-                  padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 16.0), // Added top padding
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16.0,
-                    mainAxisSpacing: 16.0,
-                    childAspectRatio: 0.7,
+                // Use a SliverGrid for a grid inside a CustomScrollView.
+                return SliverPadding(
+                  padding: const EdgeInsets.all(16.0),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16.0,
+                      mainAxisSpacing: 16.0,
+                      childAspectRatio: 0.7,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                        final productDoc = filteredProducts[index];
+                        return _UserProductGridCard(productDoc: productDoc);
+                      },
+                      childCount: filteredProducts.length,
+                    ),
                   ),
-                  itemCount: filteredProducts.length,
-                  itemBuilder: (context, index) {
-                    final productDoc = filteredProducts[index];
-                    return _UserProductGridCard(productDoc: productDoc);
-                  },
                 );
               },
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       floatingActionButton: _isAdmin
           ? FloatingActionButton(
         onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => const AdminPanelScreen()),
-          );
+          Navigator.of(context).push(MaterialPageRoute(builder: (context) => const AdminPanelScreen()));
         },
         backgroundColor: const Color(0xFF333333),
         foregroundColor: Colors.white,
@@ -227,52 +206,33 @@ class _HomeScreenState extends State<HomeScreen> {
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('categories').orderBy('name').snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const SizedBox(height: 50); // Return an empty box while loading to prevent layout shifts
-          }
+          if (!snapshot.hasData) return const SizedBox(height: 50);
 
           var categories = snapshot.data!.docs;
 
           return ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: categories.length + 1, // Add 1 for the "All" category
+            itemCount: categories.length + 1,
             itemBuilder: (context, index) {
-              // Determine the category name for the current item.
-              final String categoryName = (index == 0)
-                  ? 'All'
-                  : (categories[index - 1].data() as Map<String, dynamic>)['name'];
-
+              final String categoryName = (index == 0) ? 'All' : (categories[index - 1].data() as Map<String, dynamic>)['name'];
               final bool isSelected = _selectedCategory == categoryName;
 
               return Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedCategory = categoryName;
-                    });
-                  },
+                  onTap: () => setState(() { _selectedCategory = categoryName; }),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                     decoration: BoxDecoration(
                       color: isSelected ? const Color(0xFFFFA726) : Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(15),
-                          blurRadius: 5,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                      boxShadow: [BoxShadow(color: Colors.black.withAlpha(15), blurRadius: 5, offset: const Offset(0, 2))],
                     ),
                     child: Center(
                       child: Text(
                         categoryName,
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : const Color(0xFF333333),
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: TextStyle(color: isSelected ? Colors.white : const Color(0xFF333333), fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
