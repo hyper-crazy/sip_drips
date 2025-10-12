@@ -112,14 +112,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return const SizedBox(height: 150);
                     final banners = snapshot.data!.docs;
                     return CarouselSlider(
-                      options: CarouselOptions(height: 150.0, autoPlay: true, enlargeCenterPage: true, viewportFraction: 0.85),
+                      options: CarouselOptions(height: 250.0, autoPlay: true, enlargeCenterPage: true, viewportFraction: 1),
                       items: banners.map((doc) {
                         final data = doc.data() as Map<String, dynamic>;
                         return Container(
                           width: MediaQuery.of(context).size.width,
-                          margin: const EdgeInsets.symmetric(horizontal: 5.0),
+                          margin: const EdgeInsets.symmetric(horizontal: 15.0),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(25),
                             child: CachedNetworkImage(
                               imageUrl: data['imageUrl'] ?? '',
                               fit: BoxFit.cover,
