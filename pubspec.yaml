@@ -1,0 +1,35 @@
+name: sip_drips
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  firebase_core: ^4.1.1
+  firebase_auth: ^6.1.0
+  cloud_firestore: ^6.0.2
+  cached_network_image: ^3.3.1
+  carousel_slider: ^5.1.1
+  flutter_pw_validator: ^1.6.0
+  intl: ^0.20.2
+  flutter_dotenv: ^6.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  # This section MUST be indented with two spaces to be a child of 'flutter'.
+  assets:
+    - .env
